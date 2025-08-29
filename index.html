@@ -125,6 +125,9 @@
             <!-- Seção da Calculadora -->
             <div id="calculadora" class="tab-content hidden">
                 <div class="max-w-xs mx-auto bg-gray-800 rounded-2xl p-4 shadow-2xl">
+                    <div class="text-right h-10 mb-2">
+                        <div id="calculator-preview" class="text-gray-400 text-2xl font-light overflow-x-auto whitespace-nowrap"></div>
+                    </div>
                     <div id="calculator-display" class="bg-gray-800 text-white text-5xl text-right font-light p-4 mb-4 rounded-lg break-words">0</div>
                     <div class="grid grid-cols-4 gap-3">
                         <button class="calculator-btn bg-gray-400 text-black text-2xl h-16 rounded-full" data-key="Escape" data-action="clear">AC</button>
@@ -211,6 +214,7 @@
         statementModal: document.getElementById('statement-modal-backdrop'),
         statementBody: document.getElementById('statement-modal-body'),
         calculatorDisplay: document.getElementById('calculator-display'),
+        calculatorPreview: document.getElementById('calculator-preview'),
         calculatorButtons: document.querySelector('#calculadora .grid'),
         reportTitleInput: document.getElementById('report-title')
     };
@@ -452,20 +456,27 @@
         firstOperand: null,
         waitingForSecondOperand: false,
         operator: null,
+        expression: ''
     };
 
     function updateCalculatorDisplay() {
         dom.calculatorDisplay.textContent = calculator.displayValue.replace('.', ',');
+        dom.calculatorPreview.textContent = calculator.expression.replace(/\*/g, '×').replace(/\//g, '÷');
     }
 
     function handleCalculatorAction(action, value) {
+        const wasWaiting = calculator.waitingForSecondOperand;
+        
         switch (action) {
             case 'number':
-                if (calculator.waitingForSecondOperand) {
+                if (calculator.waitingForSecondOperand && calculator.operator) {
                     calculator.displayValue = value;
                     calculator.waitingForSecondOperand = false;
                 } else {
                     calculator.displayValue = calculator.displayValue === '0' ? value : calculator.displayValue + value;
+                }
+                if (wasWaiting && !calculator.operator) { // After pressing equals
+                    calculator.expression = '';
                 }
                 break;
             case 'decimal':
@@ -477,14 +488,11 @@
                 handleOperator(value);
                 break;
             case 'clear':
-                if (calculator.displayValue === '0' || calculator.firstOperand === null) { 
-                    calculator.displayValue = '0';
-                    calculator.firstOperand = null;
-                    calculator.waitingForSecondOperand = false;
-                    calculator.operator = null;
-                } else { 
-                    calculator.displayValue = '0';
-                }
+                calculator.displayValue = '0';
+                calculator.firstOperand = null;
+                calculator.waitingForSecondOperand = false;
+                calculator.operator = null;
+                calculator.expression = '';
                 break;
             case 'clear-entry':
                  calculator.displayValue = '0';
@@ -494,10 +502,13 @@
                 break;
             case 'percentage':
                 calculator.displayValue = (parseFloat(calculator.displayValue) / 100).toString();
+                calculator.expression = '';
                 break;
             case 'calculate':
                 if (calculator.operator && calculator.firstOperand !== null) {
-                    const result = performCalculation(calculator.firstOperand, parseFloat(calculator.displayValue), calculator.operator);
+                    const secondOperand = parseFloat(calculator.displayValue);
+                    const result = performCalculation(calculator.firstOperand, secondOperand, calculator.operator);
+                    calculator.expression = `${calculator.firstOperand} ${calculator.operator} ${secondOperand} =`;
                     calculator.displayValue = String(result);
                     calculator.firstOperand = null;
                     calculator.operator = null;
@@ -515,6 +526,8 @@
         const inputValue = parseFloat(calculator.displayValue);
         if (calculator.operator && calculator.waitingForSecondOperand) {
             calculator.operator = nextOperator;
+            calculator.expression = `${calculator.firstOperand} ${nextOperator}`;
+            updateCalculatorDisplay();
             return;
         }
         if (calculator.firstOperand === null) {
@@ -526,6 +539,8 @@
         }
         calculator.waitingForSecondOperand = true;
         calculator.operator = nextOperator;
+        calculator.expression = `${calculator.firstOperand} ${nextOperator}`;
+        updateCalculatorDisplay();
     }
 
     function performCalculation(first, second, operator) {
