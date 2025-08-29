@@ -33,6 +33,14 @@
         .calculator-btn:active {
             transform: scale(0.98);
         }
+        /* Estilos para arrastar e soltar */
+        .drag-handle {
+            cursor: grab;
+        }
+        .item-row.dragging {
+            opacity: 0.5;
+            background-color: #e0e7ff;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -56,13 +64,13 @@
         </div>
         
         <!-- Abas de Navegação -->
-        <div class="mb-4 flex border-b border-gray-200">
-            <button data-tab="descricao" class="tab-btn active flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Descrição</button>
-            <button data-tab="entradas" class="tab-btn flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Entradas</button>
-            <button data-tab="saidas" class="tab-btn flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Saídas</button>
-            <button data-tab="data" class="tab-btn flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Data</button>
-            <button data-tab="reservas" class="tab-btn flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Reservas</button>
-            <button data-tab="calculadora" class="tab-btn flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Calculadora</button>
+        <div class="mb-4 flex flex-wrap border-b border-gray-200">
+            <button data-tab="descricao" class="tab-btn active flex-grow sm:flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Descrição</button>
+            <button data-tab="entradas" class="tab-btn flex-grow sm:flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Entradas</button>
+            <button data-tab="saidas" class="tab-btn flex-grow sm:flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Saídas</button>
+            <button data-tab="data" class="tab-btn flex-grow sm:flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Data</button>
+            <button data-tab="reservas" class="tab-btn flex-grow sm:flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Reservas</button>
+            <button data-tab="calculadora" class="tab-btn flex-grow sm:flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Calculadora</button>
         </div>
 
         <!-- Conteúdo das Abas -->
@@ -234,6 +242,16 @@
         });
     }
 
+    function updateNumbering(listContainer) {
+        const items = listContainer.querySelectorAll('.item-row');
+        items.forEach((item, index) => {
+            const numberEl = item.querySelector('.item-number');
+            if (numberEl) {
+                numberEl.textContent = index + 1;
+            }
+        });
+    }
+
     function createItemRow(sectionId) {
         const listContainer = document.getElementById(`${sectionId}-list`);
         const { symbol } = config.currencyOptions[state.currency];
@@ -241,6 +259,7 @@
         
         const row = document.createElement('div');
         row.className = 'item-row flex items-center justify-center gap-2 p-3 bg-gray-50 rounded-lg shadow-sm border border-gray-200 animate-fade-in';
+        row.setAttribute('draggable', true);
         
         let inputHTML = '';
         switch(sectionId) {
@@ -258,12 +277,21 @@
         }
 
         row.innerHTML = `
-            ${inputHTML}
-            <button class="remove-btn text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full p-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+            <div class="flex items-center gap-3 w-full justify-center">
+                <span class="drag-handle text-gray-400 hover:text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-grip-vertical" viewBox="0 0 16 16">
+                        <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                    </svg>
+                </span>
+                <span class="item-number font-bold text-gray-500"></span>
+                ${inputHTML}
+                <button class="remove-btn text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full p-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
         `;
         listContainer.appendChild(row);
+        updateNumbering(listContainer);
     }
     
     function handleTabClick(event) {
@@ -532,7 +560,9 @@
     dom.mainContentWrapper.addEventListener('click', (event) => {
         const removeBtn = event.target.closest('.remove-btn');
         if (removeBtn) {
+            const listContainer = removeBtn.closest('main');
             removeBtn.closest('.item-row').remove();
+            updateNumbering(listContainer);
             calculateTotals();
         }
     });
@@ -565,6 +595,63 @@
             button.click();
         }
     });
+
+    // Drag and Drop Logic
+    let draggedItem = null;
+
+    dom.mainContentWrapper.addEventListener('dragstart', (e) => {
+        draggedItem = e.target.closest('.item-row');
+        if (draggedItem) {
+            setTimeout(() => {
+                draggedItem.classList.add('dragging');
+            }, 0);
+        }
+    });
+
+    dom.mainContentWrapper.addEventListener('dragend', (e) => {
+        if (draggedItem) {
+            draggedItem.classList.remove('dragging');
+            draggedItem = null;
+        }
+    });
+
+    dom.mainContentWrapper.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const listContainer = e.target.closest('main');
+        if (!listContainer) return;
+        
+        const afterElement = getDragAfterElement(listContainer, e.clientY);
+        const currentlyDragged = document.querySelector('.dragging');
+        
+        if (currentlyDragged) {
+            if (afterElement == null) {
+                listContainer.appendChild(currentlyDragged);
+            } else {
+                listContainer.insertBefore(currentlyDragged, afterElement);
+            }
+        }
+    });
+
+    dom.mainContentWrapper.addEventListener('drop', (e) => {
+        const listContainer = e.target.closest('main');
+        if (listContainer) {
+            updateNumbering(listContainer);
+        }
+    });
+
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.item-row:not(.dragging)')];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
 
     // --- INICIALIZAÇÃO ---
     document.addEventListener('DOMContentLoaded', () => {
