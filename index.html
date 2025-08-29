@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Financeiro com Calculadora</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Bibliotecas para Exportação -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .tab-content.hidden { display: none; }
+        .modal-backdrop.hidden { display: none; }
+        .tab-btn.active {
+            background-color: #4f46e5; /* indigo-600 */
+            color: white;
+        }
+        .calculator-btn {
+            transition: background-color 0.2s;
+        }
+        .calculator-btn:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-5xl">
+        
+        <header class="text-center mb-6">
+            <h1 class="text-3xl sm:text-4xl font-bold text-indigo-600">Meu Controle Financeiro</h1>
+            <p class="text-gray-500 mt-2">Adicione suas informações em cada seção.</p>
+        </header>
+
+        <!-- Controles Globais -->
+        <div class="flex items-center justify-center mb-6 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+            <label for="currency-select" class="font-medium text-gray-700 mr-2">Moeda:</label>
+            <select id="currency-select" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-auto p-2.5">
+                <option value="BRL" selected>Real (BRL)</option>
+                <option value="USD">Dólar (USD)</option>
+                <option value="EUR">Euro (EUR)</option>
+                <option value="CNY">Yuan (CNY)</option>
+            </select>
+        </div>
+        
+        <!-- Abas de Navegação -->
+        <div class="mb-4 flex border-b border-gray-200">
+            <button data-tab="descricao" class="tab-btn active flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Descrição</button>
+            <button data-tab="entradas" class="tab-btn flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Entradas</button>
+            <button data-tab="saidas" class="tab-btn flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Saídas</button>
+            <button data-tab="data" class="tab-btn flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Data</button>
+            <button data-tab="reservas" class="tab-btn flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Reservas</button>
+            <button data-tab="calculadora" class="tab-btn flex-1 py-3 px-4 font-medium text-gray-600 hover:bg-gray-200 transition-colors rounded-t-lg">Calculadora</button>
+        </div>
+
+        <!-- Conteúdo das Abas -->
+        <div id="main-content-wrapper" class="bg-white p-4 sm:p-6 rounded-b-lg rounded-tr-lg shadow-sm">
+            <!-- Seção de Descrição -->
+            <div id="descricao" class="tab-content">
+                <main id="descricao-list" class="space-y-3 mb-6"></main>
+                <div class="text-center mb-6">
+                    <button data-type="descricao" class="add-btn bg-indigo-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-indigo-700">+ Adicionar Descrição</button>
+                </div>
+            </div>
+            <!-- Seção de Entradas -->
+            <div id="entradas" class="tab-content hidden">
+                <main id="entradas-list" class="space-y-3 mb-6"></main>
+                <div class="text-center mb-6">
+                    <button data-type="entradas" class="add-btn bg-indigo-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-indigo-700">+ Adicionar Entrada</button>
+                </div>
+                <footer class="p-6 rounded-xl bg-gray-50 text-center">
+                    <h2 class="text-xl font-medium text-gray-500">Total de Entradas</h2>
+                    <p id="total-entradas" class="total-amount text-4xl font-bold text-green-600">R$ 0,00</p>
+                </footer>
+            </div>
+            <!-- Seção de Saídas -->
+            <div id="saidas" class="tab-content hidden">
+                <main id="saidas-list" class="space-y-3 mb-6"></main>
+                <div class="text-center mb-6">
+                    <button data-type="saidas" class="add-btn bg-indigo-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-indigo-700">+ Adicionar Saída</button>
+                </div>
+                <footer class="p-6 rounded-xl bg-gray-50 text-center">
+                    <h2 class="text-xl font-medium text-gray-500">Total de Saídas</h2>
+                    <p id="total-saidas" class="total-amount text-4xl font-bold text-red-600">R$ 0,00</p>
+                </footer>
+            </div>
+            <!-- Seção de Data -->
+            <div id="data" class="tab-content hidden">
+                <main id="data-list" class="space-y-3 mb-6"></main>
+                <div class="text-center mb-6">
+                    <button data-type="data" class="add-btn bg-indigo-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-indigo-700">+ Adicionar Data</button>
+                </div>
+            </div>
+            <!-- Seção de Reservas -->
+            <div id="reservas" class="tab-content hidden">
+                <main id="reservas-list" class="space-y-3 mb-6"></main>
+                <div class="text-center mb-6">
+                    <button data-type="reservas" class="add-btn bg-indigo-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-indigo-700">+ Adicionar Reserva</button>
+                </div>
+                <footer class="p-6 rounded-xl bg-gray-50 text-center">
+                    <h2 class="text-xl font-medium text-gray-500">Total de Reservas</h2>
+                    <p id="total-reservas" class="total-amount text-4xl font-bold text-blue-600">R$ 0,00</p>
+                </footer>
+            </div>
+            <!-- Seção da Calculadora -->
+            <div id="calculadora" class="tab-content hidden">
+                <div class="max-w-xs mx-auto bg-gray-800 rounded-2xl p-4 shadow-2xl">
+                    <div id="calculator-display" class="bg-gray-800 text-white text-5xl text-right font-light p-4 mb-4 rounded-lg break-words">0</div>
+                    <div class="grid grid-cols-4 gap-3">
+                        <button class="calculator-btn bg-gray-400 text-black text-2xl h-16 rounded-full" data-key="Escape" data-action="clear">AC</button>
+                        <button class="calculator-btn bg-gray-400 text-black text-2xl h-16 rounded-full" data-key="F9" data-action="toggle-sign">+/-</button>
+                        <button class="calculator-btn bg-gray-400 text-black text-2xl h-16 rounded-full" data-key="%" data-action="percentage">%</button>
+                        <button class="calculator-btn bg-indigo-500 text-white text-2xl h-16 rounded-full" data-key="/" data-action="operator" data-value="/">÷</button>
+                        
+                        <button class="calculator-btn bg-gray-600 text-white text-2xl h-16 rounded-full" data-key="7" data-action="number">7</button>
+                        <button class="calculator-btn bg-gray-600 text-white text-2xl h-16 rounded-full" data-key="8" data-action="number">8</button>
+                        <button class="calculator-btn bg-gray-600 text-white text-2xl h-16 rounded-full" data-key="9" data-action="number">9</button>
+                        <button class="calculator-btn bg-indigo-500 text-white text-2xl h-16 rounded-full" data-key="*" data-action="operator" data-value="*">×</button>
+
+                        <button class="calculator-btn bg-gray-600 text-white text-2xl h-16 rounded-full" data-key="4" data-action="number">4</button>
+                        <button class="calculator-btn bg-gray-600 text-white text-2xl h-16 rounded-full" data-key="5" data-action="number">5</button>
+                        <button class="calculator-btn bg-gray-600 text-white text-2xl h-16 rounded-full" data-key="6" data-action="number">6</button>
+                        <button class="calculator-btn bg-indigo-500 text-white text-2xl h-16 rounded-full" data-key="-" data-action="operator" data-value="-">−</button>
+
+                        <button class="calculator-btn bg-gray-600 text-white text-2xl h-16 rounded-full" data-key="1" data-action="number">1</button>
+                        <button class="calculator-btn bg-gray-600 text-white text-2xl h-16 rounded-full" data-key="2" data-action="number">2</button>
+                        <button class="calculator-btn bg-gray-600 text-white text-2xl h-16 rounded-full" data-key="3" data-action="number">3</button>
+                        <button class="calculator-btn bg-indigo-500 text-white text-2xl h-16 rounded-full" data-key="+" data-action="operator" data-value="+">+</button>
+
+                        <button class="calculator-btn col-span-2 bg-gray-600 text-white text-2xl h-16 rounded-full" data-key="0" data-action="number">0</button>
+                        <button class="calculator-btn bg-gray-600 text-white text-2xl h-16 rounded-full" data-key="." data-action="decimal">,</button>
+                        <button class="calculator-btn bg-indigo-500 text-white text-2xl h-16 rounded-full" data-key="Enter" data-action="calculate">=</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de Ações -->
+        <section class="mt-8 text-center bg-white p-6 rounded-lg shadow-sm">
+            <h3 class="text-lg font-medium text-gray-600 mb-4">Ações e Relatórios</h3>
+            <div class="mb-4">
+                <input type="text" id="report-title" placeholder="Digite o título do relatório" class="w-full max-w-md mx-auto bg-white border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5">
+            </div>
+            <div class="flex flex-wrap justify-center items-center gap-4">
+                <button id="fetch-rates-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-purple-700">Ver Cotação</button>
+                <button id="statement-btn" class="w-full sm:w-auto bg-blue-500 text-white font-bold py-2 px-5 rounded-lg hover:bg-blue-600">Ver Extrato</button>
+                <button id="download-xlsx-btn" class="w-full sm:w-auto bg-green-700 text-white font-bold py-2 px-5 rounded-lg hover:bg-green-800">Baixar Excel</button>
+                <button id="download-pdf-btn" class="w-full sm:w-auto bg-red-700 text-white font-bold py-2 px-5 rounded-lg hover:bg-red-800">Baixar PDF</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modais -->
+    <div id="rates-modal-backdrop" class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md animate-fade-in"><div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold text-gray-800">Cotação Ao Vivo</h3><button class="close-modal-btn text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button></div><div id="rates-modal-body"></div></div>
+    </div>
+    <div id="statement-modal-backdrop" class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-4xl animate-fade-in max-h-[90vh] flex flex-col"><div class="flex justify-between items-center mb-4 border-b pb-3"><h3 class="text-xl font-bold text-gray-800">Extrato Consolidado</h3><button class="close-modal-btn text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button></div><div id="statement-modal-body" class="overflow-y-auto"></div></div>
+    </div>
+
+    <div id="notification" class="fixed top-5 right-5 bg-red-500 text-white py-2 px-4 rounded-lg shadow-lg opacity-0 pointer-events-none transition-opacity duration-500"></div>
+
+    <script>
+    // --- ESTADO GLOBAL E CONFIGURAÇÕES ---
+    const state = { currency: 'BRL', activeTab: 'descricao' };
+    const config = {
+        currencyOptions: { 'BRL': { symbol: 'R$', locale: 'pt-BR' }, 'USD': { symbol: '$', locale: 'en-US' }, 'EUR': { symbol: '€', locale: 'de-DE' }, 'CNY': { symbol: '¥', locale: 'zh-CN' } },
+        sectionConfig: {
+            descricao: { label: 'Descrição', plural: 'Descrições' },
+            entradas: { label: 'Entrada', plural: 'Entradas' },
+            saidas: { label: 'Saída', plural: 'Saídas' },
+            data: { label: 'Data', plural: 'Datas' },
+            reservas: { label: 'Reserva', plural: 'Reservas' }
+        }
+    };
+
+    // --- SELETORES DO DOM ---
+    const dom = {
+        currencySelect: document.getElementById('currency-select'),
+        tabsContainer: document.querySelector('.flex.border-b'),
+        tabContents: document.querySelectorAll('.tab-content'),
+        downloadXlsxBtn: document.getElementById('download-xlsx-btn'),
+        downloadPdfBtn: document.getElementById('download-pdf-btn'),
+        notificationEl: document.getElementById('notification'),
+        addButtons: document.querySelectorAll('.add-btn'),
+        mainContentWrapper: document.getElementById('main-content-wrapper'),
+        fetchRatesBtn: document.getElementById('fetch-rates-btn'),
+        statementBtn: document.getElementById('statement-btn'),
+        ratesModal: document.getElementById('rates-modal-backdrop'),
+        ratesBody: document.getElementById('rates-modal-body'),
+        statementModal: document.getElementById('statement-modal-backdrop'),
+        statementBody: document.getElementById('statement-modal-body'),
+        calculatorDisplay: document.getElementById('calculator-display'),
+        calculatorButtons: document.querySelector('#calculadora .grid'),
+        reportTitleInput: document.getElementById('report-title')
+    };
+
+    // --- FUNÇÕES ---
+
+    function showNotification(message) {
+        dom.notificationEl.textContent = message;
+        dom.notificationEl.classList.remove('opacity-0');
+        setTimeout(() => dom.notificationEl.classList.add('opacity-0'), 3000);
+    }
+
+    function formatCurrency(value) {
+        if (typeof value !== 'number' || isNaN(value)) return '';
+        return value.toLocaleString(config.currencyOptions[state.currency].locale, { style: 'currency', currency: state.currency });
+    }
+
+    function calculateTotals() {
+        ['entradas', 'saidas', 'reservas'].forEach(sectionId => {
+            const list = document.getElementById(`${sectionId}-list`);
+            const totalEl = document.getElementById(`total-${sectionId}`);
+            if (!list || !totalEl) return;
+
+            let total = 0;
+            list.querySelectorAll('.item-value').forEach(row => {
+                total += parseFloat(row.value) || 0;
+            });
+            totalEl.textContent = formatCurrency(total);
+        });
+    }
+
+    function createItemRow(sectionId) {
+        const listContainer = document.getElementById(`${sectionId}-list`);
+        const { symbol } = config.currencyOptions[state.currency];
+        const today = new Date().toISOString().slice(0, 10);
+        
+        const row = document.createElement('div');
+        row.className = 'item-row flex items-center justify-center gap-2 p-3 bg-gray-50 rounded-lg shadow-sm border border-gray-200 animate-fade-in';
+        
+        let inputHTML = '';
+        switch(sectionId) {
+            case 'descricao':
+                inputHTML = `<input type="text" placeholder="Descrição" class="item-value w-full max-w-md bg-white border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5">`;
+                break;
+            case 'data':
+                inputHTML = `<input type="date" value="${today}" class="item-value w-full max-w-xs bg-white border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5">`;
+                break;
+            default: // entradas, saidas, reservas
+                inputHTML = `<div class="flex items-center w-full max-w-xs">
+                    <span class="currency-symbol text-gray-500 font-medium mr-2">${symbol}</span>
+                    <input type="number" placeholder="0.00" step="0.01" class="item-value flex-grow bg-white border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 text-right">
+                </div>`;
+        }
+
+        row.innerHTML = `
+            ${inputHTML}
+            <button class="remove-btn text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full p-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        `;
+        listContainer.appendChild(row);
+    }
+    
+    function handleTabClick(event) {
+        const tabButton = event.target.closest('.tab-btn');
+        if (!tabButton) return;
+
+        state.activeTab = tabButton.dataset.tab;
+
+        dom.tabsContainer.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        tabButton.classList.add('active');
+
+        dom.tabContents.forEach(content => content.classList.add('hidden'));
+        document.getElementById(state.activeTab).classList.remove('hidden');
+    }
+    
+    async function fetchExchangeRates() {
+        dom.ratesModal.classList.remove('hidden');
+        dom.ratesBody.innerHTML = '<p class="text-center text-gray-500">Buscando cotações...</p>';
+        try {
+            const response = await fetch(`https://open.er-api.com/v6/latest/${state.currency}`);
+            if (!response.ok) throw new Error('Falha ao buscar dados da API.');
+            const data = await response.json();
+            const rates = data.rates;
+            let html = `<p class="text-sm text-gray-600 mb-4">Cotação baseada em 1 ${state.currency}:</p><div class="space-y-2">`;
+            ['BRL', 'USD', 'EUR', 'CNY'].forEach(curr => {
+                if (curr !== state.currency && rates[curr]) {
+                    html += `<div class="flex justify-between items-center bg-gray-100 p-2 rounded-md"><span class="font-medium">${curr}</span><span class="font-mono">${rates[curr].toFixed(4)}</span></div>`;
+                }
+            });
+            dom.ratesBody.innerHTML = html + '</div>';
+        } catch (error) {
+            dom.ratesBody.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
+        }
+    }
+
+    function getConsolidatedData() {
+        const data = {};
+        Object.keys(config.sectionConfig).forEach(id => {
+            data[id] = Array.from(document.querySelectorAll(`#${id}-list .item-value`)).map(input => input.value);
+        });
+
+        const maxLength = Math.max(...Object.values(data).map(arr => arr.length));
+        const consolidated = [];
+        let totalGeral = 0;
+        for (let i = 0; i < maxLength; i++) {
+            const entrada = parseFloat(data.entradas[i]) || 0;
+            const saida = parseFloat(data.saidas[i]) || 0;
+            const totalLinha = entrada - saida;
+            totalGeral += totalLinha;
+
+            consolidated.push({
+                descricao: data.descricao[i] || '',
+                entrada: entrada,
+                saida: saida,
+                data: data.data[i] || '',
+                reserva: parseFloat(data.reservas[i]) || 0,
+                total: totalLinha
+            });
+        }
+        return { consolidated, totalGeral };
+    }
+
+    function showFullStatement() {
+        const { consolidated } = getConsolidatedData();
+        if (consolidated.length === 0) {
+            showNotification('Nenhum item encontrado.');
+            return;
+        }
+
+        let tableHTML = `<table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-100"><tr><th class="px-6 py-3">Descrição</th><th class="px-6 py-3">Data</th><th class="px-6 py-3 text-right">Entradas</th><th class="px-6 py-3 text-right">Saídas</th><th class="px-6 py-3 text-right">Reservas</th><th class="px-6 py-3 text-right">Total</th></tr></thead><tbody>`;
+        consolidated.forEach(item => {
+            if (item.descricao || item.entrada || item.saida || item.reserva || item.data) {
+                tableHTML += `<tr class="bg-white border-b">
+                    <td class="px-6 py-4 font-medium text-gray-900">${item.descricao}</td>
+                    <td class="px-6 py-4">${item.data ? new Date(item.data + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</td>
+                    <td class="px-6 py-4 font-bold text-right text-green-600">${item.entrada ? formatCurrency(item.entrada) : ''}</td>
+                    <td class="px-6 py-4 font-bold text-right text-red-600">${item.saida ? formatCurrency(item.saida) : ''}</td>
+                    <td class="px-6 py-4 font-bold text-right text-blue-600">${item.reserva ? formatCurrency(item.reserva) : ''}</td>
+                    <td class="px-6 py-4 font-bold text-right">${formatCurrency(item.total)}</td>
+                </tr>`;
+            }
+        });
+        tableHTML += `</tbody></table>`;
+        dom.statementBody.innerHTML = tableHTML;
+        dom.statementModal.classList.remove('hidden');
+    }
+
+    function downloadPDF() {
+        const { jsPDF } = window.jspdf;
+        const { consolidated, totalGeral } = getConsolidatedData();
+        const reportTitle = dom.reportTitleInput.value.trim() || 'Relatório Financeiro Consolidado';
+
+        if (consolidated.length === 0) {
+            showNotification('Nenhum item para exportar.');
+            return;
+        }
+
+        const doc = new jsPDF({ orientation: 'landscape' });
+        doc.setFontSize(18);
+        doc.text(reportTitle, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+
+        const tableData = consolidated.map(item => [
+            item.descricao,
+            item.entrada ? formatCurrency(item.entrada) : '',
+            item.saida ? formatCurrency(item.saida) : '',
+            item.data ? new Date(item.data + 'T00:00:00').toLocaleDateString('pt-BR') : '',
+            item.reserva ? formatCurrency(item.reserva) : '',
+            formatCurrency(item.total)
+        ]);
+
+        doc.autoTable({
+            head: [['Descrição', 'Entradas', 'Saídas', 'Data', 'Reservas', 'Total']],
+            body: tableData,
+            startY: 30,
+            theme: 'grid',
+            headStyles: { fillColor: [45, 55, 72], halign: 'center' },
+            columnStyles: { 0: { halign: 'left' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'center' }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+            foot: [[
+                { content: 'TOTAL GERAL', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
+                { content: formatCurrency(totalGeral), styles: { halign: 'right', fontStyle: 'bold' } }
+            ]],
+            footStyles: { fillColor: [255, 255, 153], textColor: [0, 0, 0] },
+        });
+        doc.save(`${reportTitle.replace(/ /g, '_')}.pdf`);
+    }
+    
+    function downloadXLSX() {
+        const { consolidated, totalGeral } = getConsolidatedData();
+        const reportTitle = dom.reportTitleInput.value.trim() || 'Relatorio_Financeiro';
+        if (consolidated.length === 0) {
+            showNotification('Nenhum item para exportar.');
+            return;
+        }
+
+        const dataForSheet = consolidated.map(item => ({
+            'Descrição': item.descricao,
+            'Entradas': item.entrada || '',
+            'Saídas': item.saida || '',
+            'Data': item.data ? new Date(item.data + 'T00:00:00').toLocaleDateString('pt-BR') : '',
+            'Reservas': item.reserva || '',
+            'Total': item.total
+        }));
+        
+        dataForSheet.push({});
+        dataForSheet.push({ 'Descrição': 'TOTAL GERAL', 'Total': totalGeral });
+
+        const worksheet = XLSX.utils.json_to_sheet(dataForSheet, {header: ["Descrição", "Entradas", "Saídas", "Data", "Reservas", "Total"]});
+        worksheet['!cols'] = [{ wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 15 }];
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Lançamentos");
+        
+        XLSX.writeFile(workbook, `${reportTitle.replace(/ /g, '_')}.xlsx`);
+    }
+
+    // --- LÓGICA DA CALCULADORA ---
+    const calculator = {
+        displayValue: '0',
+        firstOperand: null,
+        waitingForSecondOperand: false,
+        operator: null,
+    };
+
+    function updateCalculatorDisplay() {
+        dom.calculatorDisplay.textContent = calculator.displayValue.replace('.', ',');
+    }
+
+    function handleCalculatorAction(action, value) {
+        switch (action) {
+            case 'number':
+                if (calculator.waitingForSecondOperand) {
+                    calculator.displayValue = value;
+                    calculator.waitingForSecondOperand = false;
+                } else {
+                    calculator.displayValue = calculator.displayValue === '0' ? value : calculator.displayValue + value;
+                }
+                break;
+            case 'decimal':
+                if (!calculator.displayValue.includes('.')) {
+                    calculator.displayValue += '.';
+                }
+                break;
+            case 'operator':
+                handleOperator(value);
+                break;
+            case 'clear':
+                if (calculator.displayValue === '0' || calculator.firstOperand === null) { 
+                    calculator.displayValue = '0';
+                    calculator.firstOperand = null;
+                    calculator.waitingForSecondOperand = false;
+                    calculator.operator = null;
+                } else { 
+                    calculator.displayValue = '0';
+                }
+                break;
+            case 'clear-entry':
+                 calculator.displayValue = '0';
+                 break;
+            case 'toggle-sign':
+                calculator.displayValue = (parseFloat(calculator.displayValue) * -1).toString();
+                break;
+            case 'percentage':
+                calculator.displayValue = (parseFloat(calculator.displayValue) / 100).toString();
+                break;
+            case 'calculate':
+                if (calculator.operator && calculator.firstOperand !== null) {
+                    const result = performCalculation(calculator.firstOperand, parseFloat(calculator.displayValue), calculator.operator);
+                    calculator.displayValue = String(result);
+                    calculator.firstOperand = null;
+                    calculator.operator = null;
+                    calculator.waitingForSecondOperand = true;
+                }
+                break;
+             case 'backspace':
+                calculator.displayValue = calculator.displayValue.slice(0, -1) || '0';
+                break;
+        }
+        updateCalculatorDisplay();
+    }
+
+    function handleOperator(nextOperator) {
+        const inputValue = parseFloat(calculator.displayValue);
+        if (calculator.operator && calculator.waitingForSecondOperand) {
+            calculator.operator = nextOperator;
+            return;
+        }
+        if (calculator.firstOperand === null) {
+            calculator.firstOperand = inputValue;
+        } else if (calculator.operator) {
+            const result = performCalculation(calculator.firstOperand, inputValue, calculator.operator);
+            calculator.displayValue = String(result);
+            calculator.firstOperand = result;
+        }
+        calculator.waitingForSecondOperand = true;
+        calculator.operator = nextOperator;
+    }
+
+    function performCalculation(first, second, operator) {
+        if (operator === '+') return first + second;
+        if (operator === '-') return first - second;
+        if (operator === '*') return first * second;
+        if (operator === '/') return first / second;
+        return second;
+    }
+    
+    // --- EVENT LISTENERS ---
+    dom.currencySelect.addEventListener('change', (e) => {
+        state.currency = e.target.value;
+        document.querySelectorAll('.currency-symbol').forEach(s => s.textContent = config.currencyOptions[state.currency].symbol);
+        calculateTotals();
+    });
+    
+    dom.tabsContainer.addEventListener('click', handleTabClick);
+    dom.downloadPdfBtn.addEventListener('click', downloadPDF);
+    dom.downloadXlsxBtn.addEventListener('click', downloadXLSX);
+    dom.fetchRatesBtn.addEventListener('click', fetchExchangeRates);
+    dom.statementBtn.addEventListener('click', showFullStatement);
+    document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => e.target.closest('.modal-backdrop').classList.add('hidden')));
+
+    dom.addButtons.forEach(btn => btn.addEventListener('click', () => createItemRow(btn.dataset.type)));
+
+    dom.mainContentWrapper.addEventListener('input', (event) => {
+        if (event.target.classList.contains('item-value')) {
+            calculateTotals();
+        }
+    });
+    dom.mainContentWrapper.addEventListener('click', (event) => {
+        const removeBtn = event.target.closest('.remove-btn');
+        if (removeBtn) {
+            removeBtn.closest('.item-row').remove();
+            calculateTotals();
+        }
+    });
+
+    dom.calculatorButtons.addEventListener('click', (event) => {
+        const { target } = event;
+        if (!target.matches('button')) return;
+        handleCalculatorAction(target.dataset.action, target.dataset.value || target.textContent);
+    });
+
+    // Keyboard support for calculator
+    document.addEventListener('keydown', (event) => {
+        if (state.activeTab !== 'calculadora') return;
+
+        const key = event.key;
+        let button = document.querySelector(`.calculator-btn[data-key="${key}"]`);
+        
+        if (key === ',') { // Allow comma for decimal
+             button = document.querySelector(`.calculator-btn[data-action="decimal"]`);
+        }
+        if (key === 'Delete') {
+             handleCalculatorAction('clear-entry');
+        }
+        if (key === 'Backspace') {
+             handleCalculatorAction('backspace');
+        }
+
+        if (button) {
+            event.preventDefault();
+            button.click();
+        }
+    });
+
+    // --- INICIALIZAÇÃO ---
+    document.addEventListener('DOMContentLoaded', () => {
+        calculateTotals();
+        updateCalculatorDisplay();
+    });
+    </script>
+</body>
+</html>
